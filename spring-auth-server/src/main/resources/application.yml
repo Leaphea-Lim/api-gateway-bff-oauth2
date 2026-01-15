@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: spring-auth-server
+  datasource:
+    password: post
+    username: postgres
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5433/auth_db
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+logging:
+  level:
+    org.springframework.security: debug
+server:
+  port: 9000
+  servlet:
+    session:
+      tracking-modes: cookie
+

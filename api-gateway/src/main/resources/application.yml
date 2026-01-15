@@ -1,0 +1,98 @@
+#application.yml in api-gateway
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  security:
+    oauth2:
+      client:
+        provider:
+          auth-server:
+            issuer-uri: http://localhost:9000
+            authorization-uri: http://localhost:9000/oauth2/authorize
+            token-uri: http://localhost:9000/oauth2/token
+            user-name-attribute: sub
+        registration:
+          gateway-client:
+            provider: auth-server
+            client-id: gateway-client
+            client-secret: gateway-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/gateway-client"
+            scope: openid, profile
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: product-service
+              uri: lb://PRODUCT-SERVICE
+              predicates:
+                - Path=/api/products/**
+              filters:
+                 - StripPrefix=1
+                 - TokenRelay
+
+            - id: category-service
+              uri: lb://CATEGORY-SERVICE
+              predicates:
+                - Path=/api/categories/**
+              filters:
+                - StripPrefix=1
+                - PrefixPath=/api/v1
+                - TokenRelay
+
+            - id: nextjs-ui
+              uri: http://localhost:3000
+              predicates:
+                - Path=/**
+#                 - Path=/,/_next/**,/favicon.ico,/static/**, /protected/**
+
+          discovery:
+            locator:
+              enabled: false
+              lower-case-service-id: true
+          default-filters:
+            - SaveSession
+            - TokenRelay
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,info,circuitbreakers
+
+  endpoint:
+    gateway:
+      enabled: true
+
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      productServiceCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+      categoryServiceCB:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
